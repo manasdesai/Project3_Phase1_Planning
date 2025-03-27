@@ -444,30 +444,22 @@ def Valid_move(x: int, y: int, map_shape: tuple, obstacle_map: np.ndarray) -> bo
         bool: True if move is valid
     """
     height, width = map_shape
-
     return (0 <= x < width) and (0 <= y < height) and (obstacle_map[y, x] == 255)
 
 
 def Match_solution(start_coord: tuple, end_coord: tuple) -> bool:
     """
-    Check if the current coordinates matches with the solution
+    Check if the current coordinates are within a 1.5 units radius of the solution.
 
     Args:
         start_coord (tuple): current coordinates
         end_coord (tuple): solution coordinates
 
     Returns:
-        bool: True if both are equal
+        bool: True if within 1.5 units radius
     """
-    # if (end_coord[0] - 5 <= start_coord[0] <= end_coord[0] + 5) and (
-    #     end_coord[1] - 5 <= start_coord[1] <= end_coord[1] + 5
-    # ):
-    if start_coord == end_coord:
-        return True
-    return False
-
-
-
+    distance = np.sqrt((start_coord[0] - end_coord[0]) ** 2 + (start_coord[1] - end_coord[1]) ** 2)
+    return distance <= 1.5
 
 def GeneratePath(node_dict: Dict[int, Node], solution_index: int) -> List[tuple]:
     """
@@ -501,10 +493,10 @@ def GeneratePath(node_dict: Dict[int, Node], solution_index: int) -> List[tuple]
 
 def Astar(
     dilate_map: np.ndarray,
-    dilate_gray_map: np.ndarray,
     start_val: tuple,
     end_coord: tuple,
-    SF: int = 5,
+    radius: int,
+    step_size: int,
 ) -> List[tuple]:
     """
     A* algorithm implementation.
@@ -521,7 +513,7 @@ def Astar(
     """
     map_shape = dilate_map.shape[:2]
     height, width = map_shape
-
+    dilate_gray_map = cv2.cvtColor(dilate_map, cv2.COLOR_BGR2GRAY)  # convert to gray
     index = 0
     open_list = []
     closed_list = set()
@@ -546,16 +538,17 @@ def Astar(
         # Generate possible moves
         for angle in ANGLE_MOVES:
             new_theta = current_node._theta + angle
-            new_x = round(current_node.x + SF * np.cos(np.deg2rad(new_theta)))
-            new_y = round(current_node.y + SF * np.sin(np.deg2rad(new_theta)))
-
+            new_x = round(current_node.x + step_size* np.cos(np.deg2rad(new_theta)))
+            new_y = round(current_node.y + step_size* np.sin(np.deg2rad(new_theta)))
+            #check the data type of new_x,new_y, map_shape, dilate_map
+            # print(f"new_x: {type(new_x)}, new_y: {type(new_y)}, map_shape: {type(map_shape)}, dilate_map: {type(dilate_map)}")
             if not Valid_move(new_x, new_y, map_shape, dilate_gray_map):
                 continue
 
             if (new_x, new_y, new_theta) in closed_list:
                 continue
 
-            new_cost = current_node.cost + SF
+            new_cost = current_node.cost + step_size
             new_cost_estimate = EstimateCost(new_x, new_y, end_coord[0], end_coord[1])
             new_node = Node(len(node_dict), current_index, new_cost, new_cost_estimate, new_x, new_y, new_theta)
 
@@ -565,12 +558,10 @@ def Astar(
     print("No Solution Found!")
     return []
     
-def test() -> None:
+def test() -> np.ndarray:
     #### Test parameters
     sf_obstacle = 7
     radius = 5
-    clearance = 5
-    step_size = 1
 
     cv2.namedWindow("Test", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Test", WIDTH, HEIGHT)
@@ -592,7 +583,7 @@ def test() -> None:
         dilate_map, (SOLUTION_COORD[0], HEIGHT - SOLUTION_COORD[1]), 5, (0, 0, 0), -1
     )  # Draw circle at end coordinate
 
-    dilate_gray_map = cv2.cvtColor(dilate_map, cv2.COLOR_BGR2GRAY)  # convert to gray
+    # dilate_gray_map = cv2.cvtColor(dilate_map, cv2.COLOR_BGR2GRAY)  # convert to gray
 
     # cv2.imshow("Screen", obstacle_map)  # show Map
     cv2.imshow("Test", dilate_map)  # show Dilate-Map
@@ -600,26 +591,161 @@ def test() -> None:
 
     # plt.imshow(dilate_map)
     # plt.show()
+    return dilate_map
 
+def visualize_and_save_path(
+    explored_nodes: List[tuple],
+    optimal_path: List[tuple],
+    map_image: np.ndarray,
+    output_video_path: str = "astar_visualization.mp4",
+    fps: int = 10,
+) -> None:
+    """
+    Visualize the exploration and optimal path generation and save it as a video.
+
+    Args:
+        explored_nodes (List[tuple]): List of nodes explored during A*.
+        optimal_path (List[tuple]): List of nodes in the optimal path.
+        map_image (np.ndarray): The map image to overlay the visualization.
+        output_video_path (str): Path to save the output video.
+        fps (int): Frames per second for the video.
+    """
+    # Create a copy of the map to draw on
+    visualization_map = map_image.copy()
+
+    # Define video writer
+    height, width, _ = visualization_map.shape
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    video_writer = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
+
+    # Visualize explored nodes
+    for node in explored_nodes:
+        x, y = node
+        cv2.circle(visualization_map, (x, height - y), 2, (0, 255, 0), -1)  # Green for exploration
+        video_writer.write(visualization_map)
+
+    # Visualize optimal path
+    for i in range(len(optimal_path) - 1):
+        x1, y1 = optimal_path[i]
+        x2, y2 = optimal_path[i + 1]
+        cv2.line(
+            visualization_map,
+            (x1, height - y1),
+            (x2, height - y2),
+            (0, 0, 255),
+            2,
+        )  # Red for optimal path
+        video_writer.write(visualization_map)
+
+    # Release the video writer
+    video_writer.release()
+    print(f"Visualization saved as {output_video_path}")
+
+def get_user_input() -> tuple:
+    """
+    Get user input for start and goal coordinates, clearance, robot radius, and step size.
+
+    Returns:
+        tuple: (start_coord, goal_coord, clearance, radius, step_size)
+    """
+    print("Enter the following values:")
+
+    # Get start point coordinates
+    while True:
+        try:
+            start_x = int(input("Start X (0 <= X <= 600): "))
+            start_y = int(input("Start Y (0 <= Y <= 250): "))
+            start_theta = int(input("Start θ (multiple of 30, e.g., -60, -30, 0, 30, 60): "))
+            if 0 <= start_x <= WIDTH and 0 <= start_y <= HEIGHT and start_theta % 30 == 0:
+                break
+            else:
+                print("Invalid input. Please enter valid start coordinates.")
+        except:
+            print("Invalid input. Please enter integers.")
+
+    # Get goal point coordinates
+    while True:
+        try:
+            goal_x = int(input("Goal X (0 <= X <= 600): "))
+            goal_y = int(input("Goal Y (0 <= Y <= 250): "))
+            goal_theta = int(input("Goal θ (multiple of 30, e.g., -60, -30, 0, 30, 60): "))
+            if 0 <= goal_x <= WIDTH and 0 <= goal_y <= HEIGHT and goal_theta % 30 == 0:
+                break
+            else:
+                print("Invalid input. Please enter valid goal coordinates.")
+        except:
+            print("Invalid input. Please enter integers.")
+
+    # Get clearance
+    while True:
+        try:
+            clearance = int(input("Clearance (in units, >= 0): "))
+            if clearance >= 0:
+                break
+            else:
+                print("Invalid input. Clearance must be >= 0.")
+        except:
+            print("Invalid input. Please enter an integer.")
+
+    # Get robot radius
+    while True:
+        try:
+            radius = int(input("Robot radius (in units, >= 0): "))
+            if radius >= 0:
+                break
+            else:
+                print("Invalid input. Radius must be >= 0.")
+        except:
+            print("Invalid input. Please enter an integer.")
+
+    # Get step size
+    while True:
+        try:
+            step_size = int(input("Step size (1 <= step size <= 10): "))
+            if 1 <= step_size <= 10:
+                break
+            else:
+                print("Invalid input. Step size must be between 1 and 10.")
+        except:
+            print("Invalid input. Please enter an integer.")
+
+    start_coord = (start_x, start_y, start_theta)
+    goal_coord = (goal_x, goal_y, goal_theta)
+
+    return start_coord, goal_coord, clearance, radius, step_size
+
+def get_parameters() -> tuple:
+    """
+    Get parameters for the program, either using default values or prompting the user.
+
+    Returns:
+        tuple: (start_coord, goal_coord, clearance, radius, step_size)
+    """
+    use_defaults = input("Do you want to use default values? (yes/no): ").strip().lower()
+
+    if use_defaults == "yes":
+        print("Using default values...")
+        start_coord = (10,10, 0)
+        goal_coord = (400,200, 0)
+        clearance = 5
+        radius = 5
+        step_size = 10
+    else:
+        print("Prompting user for input...")
+        start_coord, goal_coord, clearance, radius, step_size = get_user_input()
+
+    return start_coord, goal_coord, clearance, radius, step_size
 
 def main() -> None:
     """
     main function
     """
-    sf_obstacle = 6
-    # Create a window
-    cv2.namedWindow("Screen", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Screen", WIDTH, HEIGHT)
-
-    obstacle_map = generate_map(sf_obstacle)  # generate map
-
-    dilate_map = dilate_obstacle(obstacle_map, sf_obstacle)  # dilate map
-    # dilate_gray_map = cv2.cvtColor(dilate_map, cv2.COLOR_BGR2GRAY)  # convert to gray
-
-    cv2.imshow("Screen", dilate_map)  # show Map
-    cv2.waitKey(0)
-
+    #Visualize both the dilated and the obstacle map
+    print("Generating map...")
+    dilated_map = test()
+    start_coord, goal_coord, clearance, radius, step_size = get_parameters()
+    #Run the ASTAR algorithm
+    path = Astar(dilated_map, start_coord, goal_coord, radius, step_size)
 
 if __name__ == "__main__":
-    # main()
-    test()
+    main()
