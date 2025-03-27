@@ -58,6 +58,158 @@ class Node:
         self._theta = theta
 
 
+def EstimateCost(x1, y1, x2, y2):
+    return np.sqrt(np.square(x2 - x1) + np.square(y2 - y1))  # Euclidean distance
+    # return abs((x2 - x1) + (y2 - y1))  # Manhatten distance
+
+
+def MoveSharpLeft(
+    current_node: Node, step_size: int, end_coord: tuple, SF: int
+) -> Node:
+    end_x, end_y = end_coord
+    newNode = copy.deepcopy(current_node)
+
+    newNode.current_index = None
+    newNode.parent_index = current_node.current_index
+    newNode.cost += step_size * SF
+
+    newNode.x = (
+        round(
+            current_node.x
+            + step_size * np.cos(np.deg2rad(current_node._theta + SHARP_LEFT) * SF) * 2
+        )
+        / 2
+    )
+    newNode.y = (
+        round(
+            current_node.x
+            + step_size * np.sin(np.deg2rad(current_node._theta + SHARP_LEFT) * SF) * 2
+        )
+        / 2
+    )
+    newNode._theta = current_node._theta + SHARP_LEFT
+    newNode.cost_estimate = EstimateCost(newNode.x, newNode.y, end_x, end_y)
+
+    return newNode
+
+
+def MoveSlowLeft(current_node: Node, step_size: int, end_coord: tuple, SF: int) -> Node:
+    end_x, end_y = end_coord
+    newNode = copy.deepcopy(current_node)
+
+    newNode.current_index = None
+    newNode.parent_index = current_node.current_index
+    newNode.cost += step_size * SF
+
+    newNode.x = (
+        round(
+            current_node.x
+            + step_size * np.cos(np.deg2rad(current_node._theta + SLOW_LEFT) * SF) * 2
+        )
+        / 2
+    )
+    newNode.y = (
+        round(
+            current_node.x
+            + step_size * np.sin(np.deg2rad(current_node._theta + SLOW_LEFT) * SF) * 2
+        )
+        / 2
+    )
+    newNode._theta = current_node._theta + SLOW_LEFT
+    newNode.cost_estimate = EstimateCost(newNode.x, newNode.y, end_x, end_y)
+
+    return newNode
+
+
+def MoveStraight(current_node: Node, step_size: int, end_coord: tuple, SF: int) -> Node:
+    end_x, end_y = end_coord
+    newNode = copy.deepcopy(current_node)
+
+    newNode.current_index = None
+    newNode.parent_index = current_node.current_index
+    newNode.cost += step_size * SF
+
+    newNode.x = (
+        round(
+            current_node.x
+            + step_size * np.cos(np.deg2rad(current_node._theta + STRAIGHT) * SF) * 2
+        )
+        / 2
+    )
+    newNode.y = (
+        round(
+            current_node.x
+            + step_size * np.sin(np.deg2rad(current_node._theta + STRAIGHT) * SF) * 2
+        )
+        / 2
+    )
+    newNode._theta = current_node._theta + STRAIGHT
+    newNode.cost_estimate = EstimateCost(newNode.x, newNode.y, end_x, end_y)
+
+    return newNode
+
+
+def MoveSlowRight(
+    current_node: Node, step_size: int, end_coord: tuple, SF: int
+) -> Node:
+    end_x, end_y = end_coord
+    newNode = copy.deepcopy(current_node)
+
+    newNode.current_index = None
+    newNode.parent_index = current_node.current_index
+    newNode.cost += step_size * SF
+
+    newNode.x = (
+        round(
+            current_node.x
+            + step_size * np.cos(np.deg2rad(current_node._theta + SLOW_RIGHT) * SF) * 2
+        )
+        / 2
+    )
+    newNode.y = (
+        round(
+            current_node.x
+            + step_size * np.sin(np.deg2rad(current_node._theta + SLOW_RIGHT) * SF) * 2
+        )
+        / 2
+    )
+    newNode._theta = current_node._theta + SLOW_RIGHT
+    newNode.cost_estimate = EstimateCost(newNode.x, newNode.y, end_x, end_y)
+
+    return newNode
+
+
+def MoveSharpRight(
+    current_node: Node, step_size: int, end_coord: tuple, SF: int
+) -> Node:
+    end_x, end_y = end_coord
+    newNode = copy.deepcopy(current_node)
+
+    newNode.current_index = None
+    newNode.parent_index = current_node.current_index
+    newNode.cost += step_size * SF
+
+    newNode.x = (
+        round(
+            current_node.x
+            + step_size * np.cos(np.deg2rad(current_node._theta + SHARP_RIGHT) * SF) * 2
+        )
+        / 2
+    )
+    newNode.y = (
+        round(
+            current_node.x
+            + step_size * np.sin(np.deg2rad(current_node._theta + SHARP_RIGHT) * SF) * 2
+        )
+        / 2
+    )
+    newNode._theta = current_node._theta + SHARP_RIGHT
+    newNode.cost_estimate = EstimateCost(newNode.x, newNode.y, end_x, end_y)
+
+    return newNode
+
+
+
 def generate_map(SF=2):
     # EMPTY map
     map = np.ones((HEIGHT, WIDTH, 3), dtype=np.uint8) * 255
@@ -229,7 +381,7 @@ def generate_map(SF=2):
     return map
 
 
-def dilate_obstacle(obstacle_map: np.ndarray, sf_radius: int = 5) -> np.ndarray:
+def dilate_obstacle(obstacle_map: np.ndarray, sf_radius: int) -> np.ndarray:
     """
     Dilate the obstacle map by 2mm
 
@@ -275,6 +427,98 @@ def dilate_obstacle(obstacle_map: np.ndarray, sf_radius: int = 5) -> np.ndarray:
 
 
     return final_map
+
+
+
+def Valid_move(x: int, y: int, map_shape: tuple, obstacle_map: np.ndarray) -> bool:
+    """
+    check if the move is valid or not.
+
+    Args:
+        x (int): x coordinate
+        y (int): y coordinate
+        map_shape (tuple): map dimension
+        obstacle_map (np.ndarray): obstacle map
+
+    Returns:
+        bool: True if move is valid
+    """
+    height, width = map_shape
+
+    return (0 <= x < width) and (0 <= y < height) and (obstacle_map[y, x] == 255)
+
+
+def Match_solution(start_coord: tuple, end_coord: tuple) -> bool:
+    """
+    Check if the current coordinates matches with the solution
+
+    Args:
+        start_coord (tuple): current coordinates
+        end_coord (tuple): solution coordinates
+
+    Returns:
+        bool: True if both are equal
+    """
+    # if (end_coord[0] - 5 <= start_coord[0] <= end_coord[0] + 5) and (
+    #     end_coord[1] - 5 <= start_coord[1] <= end_coord[1] + 5
+    # ):
+    if start_coord == end_coord:
+        return True
+    return False
+
+
+
+
+def GeneratePath(node_dict: Dict[int, Node], solution_index: int) -> List[tuple]:
+    """
+    Generate path
+
+    Args:
+        node_dict (Dict[int, Node]): al the visited nodes as value, and index as key.
+        solution_index (int): index of solutioon
+
+    Returns:
+        List[tuple]: _description_
+    """
+    path = list()
+
+    node = node_dict[solution_index]
+    # print_node(node)
+
+    path.append((node.x, node.y))
+    parent_index = node.parent_index
+
+    print("START : Generating path")
+    while parent_index != -1:
+        node = node_dict.get(parent_index)
+        path.append((node.x, node.y))
+        parent_index = node.parent_index
+
+    print("END : Generating path")
+
+    return path
+
+
+
+def Astar(dilate_map: np.ndarray,
+    dilate_gray_map: np.ndarray,
+    start_val: tuple,
+    end_coord: tuple,
+    SF: int = 5,
+) -> np.ndarray:
+    map_shape = dilate_map.shape[:2]
+    height, width = map_shape
+    
+    index = 0 
+    open_list = list()
+    
+    
+    first_node = Node(index, -1, -1, start_val[0], start_val[1],start_val[2])  # intital ndoe
+    
+    heapq.heappush(open_list, first_node)
+    
+    
+    
 
 
 def test() -> None:
