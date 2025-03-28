@@ -82,7 +82,7 @@ def MoveSharpLeft(
     )
     newNode.y = (
         round(
-            current_node.x
+            current_node.y
             + step_size * np.sin(np.deg2rad(current_node._theta + SHARP_LEFT) * SF) * 2
         )
         / 2
@@ -110,7 +110,7 @@ def MoveSlowLeft(current_node: Node, step_size: int, end_coord: tuple, SF: int) 
     )
     newNode.y = (
         round(
-            current_node.x
+            current_node.y
             + step_size * np.sin(np.deg2rad(current_node._theta + SLOW_LEFT) * SF) * 2
         )
         / 2
@@ -138,7 +138,7 @@ def MoveStraight(current_node: Node, step_size: int, end_coord: tuple, SF: int) 
     )
     newNode.y = (
         round(
-            current_node.x
+            current_node.y
             + step_size * np.sin(np.deg2rad(current_node._theta + STRAIGHT) * SF) * 2
         )
         / 2
@@ -168,7 +168,7 @@ def MoveSlowRight(
     )
     newNode.y = (
         round(
-            current_node.x
+            current_node.y
             + step_size * np.sin(np.deg2rad(current_node._theta + SLOW_RIGHT) * SF) * 2
         )
         / 2
@@ -198,7 +198,7 @@ def MoveSharpRight(
     )
     newNode.y = (
         round(
-            current_node.x
+            current_node.y
             + step_size * np.sin(np.deg2rad(current_node._theta + SHARP_RIGHT) * SF) * 2
         )
         / 2
@@ -214,6 +214,9 @@ def generate_map(SF=2):
     # EMPTY map
     map = np.ones((HEIGHT, WIDTH, 3), dtype=np.uint8) * 255
 
+    def Wall_obstacles(x, y):
+        return x == 0 or x == WIDTH - 1 or y == 0 or y == HEIGHT - 1
+    
     ########
     ## E obstacle
     def E1_obstacle(x, y):
@@ -374,6 +377,7 @@ def generate_map(SF=2):
                 or Six1_obstacle(x, y)
                 or Six2_obstacle(x, y)
                 or One_obstacle(x, y)
+                or Wall_obstacles(x, y)
             ):
                 map[y, x] = (0, 0, 0)
 
