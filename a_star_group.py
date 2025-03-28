@@ -780,7 +780,7 @@ def Collision_between_points(current_x, current_y, neighbor_x, neighbor_y, grays
             (grayscale_map.shape[0], grayscale_map.shape[1]),
             grayscale_map):
             return True 
-        return False              
+    return False              
 
 def main() -> None:
     """
