@@ -11,6 +11,7 @@ from queue import Queue
 import matplotlib.pyplot as plt
 from typing import List, Dict
 import pdb
+from queue import PriorityQueue 
 
 #############
 ## CONSTANTS
@@ -47,7 +48,7 @@ class Node:
         cost_estimate: int,
         x: float,
         y: float,
-        theta: int,
+        theta: int
     ) -> None:
         self.current_index = c_index
         self.parent_index = p_index
@@ -56,6 +57,9 @@ class Node:
         self.x = x
         self.y = y
         self._theta = theta
+        self.x_index = int(x)
+        self.y_index = int(y)
+        self.theta_index = int(theta /  30)
 
 
 def EstimateCost(x1, y1, x2, y2):
@@ -76,19 +80,24 @@ def MoveSharpLeft(
     newNode.x = (
         round(
             current_node.x
-            + step_size * np.cos(np.deg2rad(current_node._theta + SHARP_LEFT) * SF) * 2
+            + step_size * np.cos(np.deg2rad(current_node._theta + SHARP_LEFT)) * 2
         )
         / 2
     )
     newNode.y = (
         round(
             current_node.y
-            + step_size * np.sin(np.deg2rad(current_node._theta + SHARP_LEFT) * SF) * 2
+            + step_size * np.sin(np.deg2rad(current_node._theta + SHARP_LEFT)) * 2
         )
         / 2
     )
     newNode._theta = current_node._theta + SHARP_LEFT
     newNode.cost_estimate = EstimateCost(newNode.x, newNode.y, end_x, end_y)
+
+    # Update the index fields
+    newNode.x_index = int(newNode.x)
+    newNode.y_index = int(newNode.y)
+    newNode.theta_index = int(newNode._theta / 30)
 
     return newNode
 
@@ -104,19 +113,24 @@ def MoveSlowLeft(current_node: Node, step_size: int, end_coord: tuple, SF: int) 
     newNode.x = (
         round(
             current_node.x
-            + step_size * np.cos(np.deg2rad(current_node._theta + SLOW_LEFT) * SF) * 2
+            + step_size * np.cos(np.deg2rad(current_node._theta + SLOW_LEFT)) * 2
         )
         / 2
     )
     newNode.y = (
         round(
             current_node.y
-            + step_size * np.sin(np.deg2rad(current_node._theta + SLOW_LEFT) * SF) * 2
+            + step_size * np.sin(np.deg2rad(current_node._theta + SLOW_LEFT)) * 2
         )
         / 2
     )
     newNode._theta = current_node._theta + SLOW_LEFT
     newNode.cost_estimate = EstimateCost(newNode.x, newNode.y, end_x, end_y)
+
+    # Update the index fields
+    newNode.x_index = int(newNode.x)
+    newNode.y_index = int(newNode.y)
+    newNode.theta_index = int(newNode._theta / 30)
 
     return newNode
 
@@ -132,20 +146,24 @@ def MoveStraight(current_node: Node, step_size: int, end_coord: tuple, SF: int) 
     newNode.x = (
         round(
             current_node.x
-            + step_size * np.cos(np.deg2rad(current_node._theta + STRAIGHT) * SF) * 2
+            + step_size * np.cos(np.deg2rad(current_node._theta + STRAIGHT)) * 2
         )
         / 2
     )
     newNode.y = (
         round(
             current_node.y
-            + step_size * np.sin(np.deg2rad(current_node._theta + STRAIGHT) * SF) * 2
+            + step_size * np.sin(np.deg2rad(current_node._theta + STRAIGHT)) * 2
         )
         / 2
     )
     newNode._theta = current_node._theta + STRAIGHT
     newNode.cost_estimate = EstimateCost(newNode.x, newNode.y, end_x, end_y)
 
+    # Update the index fields
+    newNode.x_index = int(newNode.x)
+    newNode.y_index = int(newNode.y)
+    newNode.theta_index = int(newNode._theta / 30)    
     return newNode
 
 
@@ -162,19 +180,24 @@ def MoveSlowRight(
     newNode.x = (
         round(
             current_node.x
-            + step_size * np.cos(np.deg2rad(current_node._theta + SLOW_RIGHT) * SF) * 2
+            + step_size * np.cos(np.deg2rad(current_node._theta + SLOW_RIGHT)) * 2
         )
         / 2
     )
     newNode.y = (
         round(
             current_node.y
-            + step_size * np.sin(np.deg2rad(current_node._theta + SLOW_RIGHT) * SF) * 2
+            + step_size * np.sin(np.deg2rad(current_node._theta + SLOW_RIGHT)) * 2
         )
         / 2
     )
     newNode._theta = current_node._theta + SLOW_RIGHT
     newNode.cost_estimate = EstimateCost(newNode.x, newNode.y, end_x, end_y)
+
+    # Update the index fields
+    newNode.x_index = int(newNode.x)
+    newNode.y_index = int(newNode.y)
+    newNode.theta_index = int(newNode._theta / 30)
 
     return newNode
 
@@ -206,6 +229,11 @@ def MoveSharpRight(
     newNode._theta = current_node._theta + SHARP_RIGHT
     newNode.cost_estimate = EstimateCost(newNode.x, newNode.y, end_x, end_y)
 
+    # Update the index fields
+    newNode.x_index = int(newNode.x)
+    newNode.y_index = int(newNode.y)
+    newNode.theta_index = int(newNode._theta / 30)
+    
     return newNode
 
 
@@ -497,73 +525,130 @@ def GeneratePath(node_dict: Dict[int, Node], solution_index: int) -> List[tuple]
 
 def Astar(
     dilate_map: np.ndarray,
-    start_val: tuple,
-    end_coord: tuple,
-    radius: int,
+    dilate_gray_map: np.ndarray,
+    start: tuple,
+    goal: tuple,
     step_size: int,
+    SF: int
 ) -> List[tuple]:
     """
     A* algorithm implementation.
 
     Args:
-        dilate_map (np.ndarray): Dilated map with obstacles.
-        dilate_gray_map (np.ndarray): Grayscale version of the dilated map.
-        start_val (tuple): Starting coordinates (x, y, theta).
-        end_coord (tuple): Goal coordinates (x, y, theta).
+        dilate_map (np.ndarray): Dilated map with obstacles. This is an image, indexed with [row, column] <-> [y, x]
+        dilate_gray_map (np.ndarray): Grayscale version of the dilated map. This is an image, indexed with [row, column] <-> [y, x]
+        start (tuple): Starting coordinates (x, y, theta).
+        goal (tuple): Goal coordinates (x, y, theta).
+        step_size (int): Step size for search
         SF (int): Scale factor.
 
     Returns:
         List[tuple]: Path from start to goal.
     """
-    dilate_gray_map = cv2.cvtColor(dilate_map, cv2.COLOR_BGR2GRAY)  # convert to gray
+
+    # Define the search space data structure
+    search_array_shape = (
+        dilate_gray_map.shape[0],
+        dilate_gray_map.shape[1],
+        12
+    )
+    search_array = np.zeros(search_array_shape, dtype=np.int8)
+
+    # Define the start node
+    start_node = Node(
+        c_index = 0,
+        p_index = -1,
+        cost = 0.0,
+        cost_estimate = EstimateCost(start[0], start[1], goal[0], goal[1]),
+        x = start[0],
+        y = start[1],
+        theta = start[2]
+    )
+
+    # Set up main data structures while processing the start node:
+
+    # Mark the START node as OPEN
+    search_array[start_node.y_index, start_node.x_index, start_node.theta_index] = 2
+
+    # Cost to Come (g-score)
+    g_scores = dict()
+    g_scores[(start_node.x_index, start_node.y_index, start_node.theta_index)] = 0.0
+
+    # Parents dictionary
+    parents = dict()
+    parents[(start_node.x_index, start_node.y_index, start_node.theta_index): None]
+
+    # Priority Queue
+    queue = PriorityQueue()
+    f_score_start = 0.0 + EstimateCost(start_node.x, start_node.y, goal[0], goal[1])
+    queue.put((f_score_start, start_node))
+
+    # Begin the A* main loop: 
+    goal_is_found = False
+    while not queue.empty():
+        
+        # Pop the most promising node -> CURRENT
+        f_current, current_node = queue.get()
+
+        # Skip CURRENT if VISITED already
+        if search_array[current_node.y_index, current_node.x_index, current_node.theta_index] == 1:
+            continue
+        
+        # Mark CURRENT as VISITED otherwise 
+        search_array[current_node.y_index, current_node.x_index, current_node.theta_index] = 1
+
+        # If CURRENT is GOAL, STOP
+        if (current_node.x_index, current_node.y_index) == (goal[0], goal[1]):
+            print("A* has found the goal!")
+            goal_is_found = True
+            found_goal = current_node
+            break
+        
+        # Expand neighbors using the MOVE functions
+        for move in [MoveSharpLeft, MoveSlowLeft, MoveStraight, MoveSlowRight, MoveSharpRight]:
+
+            # Determines the RESULTING TENTATIVE NEIGHBOR
+            neighbor_node = move(current_node, step_size, goal, SF)
+
+            # If a COLLISION occurs between CURRENT and NEIGHBOR (possible with larger step sizes), SKIP 
+            if Collision_between_points(current_node.x, current_node.y, neighbor_node.x, neighbor_node.y, dilate_gray_map, step_size):
+                continue 
+            
+            # GENERATES a KEY for NEIGHBOR
+            neighbor_key = (neighbor_node.x_index, neighbor_node.y_index, neighbor_node.theta_index)
+
+            # COMPUTES AND SAVES a TENTATIVE G SCORE for NEIGHBOR
+            tentative_g_score = g_scores[(current_node.x_index, current_node.y_index, current_node.theta_index)] + step_size * SF
+
+            # IF NEIGHBOR is EITHER NOT OPENED or HAS BEEN OPENED but the NEIGHBOT TENTATIVE G-SCORE is LOWER, PROCESS NEIGHBOR
+            if neighbor_key not in g_scores or tentative_g_score < g_scores[neighbor_key]:
+                g_scores[neighbor_key] = tentative_g_score
+                parents[neighbor_key] = (current_node.x_index, current_node.y_index, current_node.theta_index)
+                f_neighbor = tentative_g_score + EstimateCost(neighbor_node.x, neighbor_node.y, goal[0], goal[1]) 
+                queue.put((f_neighbor, neighbor_node))
+                search_array[neighbor_node.y_index, neighbor_node.x_index, neighbor_node.theta_index] = 2
+
+        if goal_is_found:
+            goal_key = (found_goal.x_index, found_goal.y_index, found_goal.theta_index)
+            return GeneratePath(parents, goal_key)
+        
+        else:
+            print("No path found")
+            return []
 
 
-    map_shape = dilate_map.shape[:2]
-    height, width = map_shape
 
-    index = 0
-    open_list = []
-    closed_list = set()
-    node_dict = {}
 
-    # Initialize the first node
-    first_node = Node(index, -1, 0, EstimateCost(start_val[0], start_val[1], end_coord[0], end_coord[1]), start_val[0], start_val[1], start_val[2])
-    heapq.heappush(open_list, (first_node.cost + first_node.cost_estimate, index))
-    node_dict[index] = first_node
 
-    while open_list:
-        _, current_index = heapq.heappop(open_list)
-        current_node = node_dict[current_index]
 
-        # Check if the goal is reached
-        if Match_solution((current_node.x, current_node.y), (end_coord[0], end_coord[1])):
-            print("Solution Found!")
-            return GeneratePath(node_dict, current_index)
 
-        closed_list.add((current_node.x, current_node.y, current_node._theta))
 
-        # Generate possible moves
-        for angle in ANGLE_MOVES:
-            new_theta = current_node._theta + angle
-            new_x = round(current_node.x + step_size* np.cos(np.deg2rad(new_theta)))
-            new_y = round(current_node.y + step_size* np.sin(np.deg2rad(new_theta)))
-            #check the data type of new_x,new_y, map_shape, dilate_map
-            # print(f"new_x: {type(new_x)}, new_y: {type(new_y)}, map_shape: {type(map_shape)}, dilate_map: {type(dilate_map)}")
-            if not Valid_move(new_x, new_y, map_shape, dilate_gray_map):
-                continue
+    
 
-            if (new_x, new_y, new_theta) in closed_list:
-                continue
 
-            new_cost = current_node.cost + step_size
-            new_cost_estimate = EstimateCost(new_x, new_y, end_coord[0], end_coord[1])
-            new_node = Node(len(node_dict), current_index, new_cost, new_cost_estimate, new_x, new_y, new_theta)
 
-            heapq.heappush(open_list, (new_cost + new_cost_estimate, new_node.current_index))
-            node_dict[new_node.current_index] = new_node
 
-    print("No Solution Found!")
-    return []
+    
     
 def test() -> np.ndarray:
     #### Test parameters
@@ -767,7 +852,7 @@ def Collision_between_points(current_x, current_y, neighbor_x, neighbor_y, grays
     """
     Returns true if there is a collision between current and neighbor, false if not. Requires the grayscale map and the step size for the search.
     """
-    for baby_step in range(1, step_size):
+    for baby_step in range(1, step_size+1):
         dx = neighbor_x - current_x
         dy = neighbor_y - current_y 
         distance = (dx**2 + dy**2)**0.5
@@ -815,7 +900,7 @@ def main() -> None:
     goal_pose = get_user_input_goal_pose(grayscale_map)
 
     # 8. Run the A* algorithm
-    path = Astar(safety_margin_map, start_pose, goal_pose, safety_margin, step_size)
+    path = Astar(safety_margin_map, grayscale_map, start_pose, goal_pose, safety_margin, step_size)
     
 
 if __name__ == "__main__":

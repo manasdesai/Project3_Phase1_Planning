@@ -1,0 +1,5 @@
+Enter the step size (mm): 5
+Enter a safety margin around obstacles (mm): 5
+Enter the robot radius (mm): 6
+Enter the (mm, mm, deg) coordinates for the start pose, separated by only spaces:50 100 180
+Enter the (mm, mm, deg) coordinates for the goal pose, separated by only spaces:400 25 18
