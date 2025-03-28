@@ -10,7 +10,7 @@ import numpy as np
 from queue import Queue
 import matplotlib.pyplot as plt
 from typing import List, Dict
-
+import pdb
 
 #############
 ## CONSTANTS
@@ -515,9 +515,12 @@ def Astar(
     Returns:
         List[tuple]: Path from start to goal.
     """
+    dilate_gray_map = cv2.cvtColor(dilate_map, cv2.COLOR_BGR2GRAY)  # convert to gray
+
+
     map_shape = dilate_map.shape[:2]
     height, width = map_shape
-    dilate_gray_map = cv2.cvtColor(dilate_map, cv2.COLOR_BGR2GRAY)  # convert to gray
+
     index = 0
     open_list = []
     closed_list = set()
@@ -645,45 +648,17 @@ def visualize_and_save_path(
     video_writer.release()
     print(f"Visualization saved as {output_video_path}")
 
-def get_user_input() -> tuple:
+def get_user_input_clearance() -> int:
     """
-    Get user input for start and goal coordinates, clearance, robot radius, and step size.
+    Get the clearance from the user
 
     Returns:
-        tuple: (start_coord, goal_coord, clearance, radius, step_size)
+        int
     """
-    print("Enter the following values:")
-
-    # Get start point coordinates
-    while True:
-        try:
-            start_x = int(input("Start X (0 <= X <= 600): "))
-            start_y = int(input("Start Y (0 <= Y <= 250): "))
-            start_theta = int(input("Start θ (multiple of 30, e.g., -60, -30, 0, 30, 60): "))
-            if 0 <= start_x <= WIDTH and 0 <= start_y <= HEIGHT and start_theta % 30 == 0:
-                break
-            else:
-                print("Invalid input. Please enter valid start coordinates.")
-        except:
-            print("Invalid input. Please enter integers.")
-
-    # Get goal point coordinates
-    while True:
-        try:
-            goal_x = int(input("Goal X (0 <= X <= 600): "))
-            goal_y = int(input("Goal Y (0 <= Y <= 250): "))
-            goal_theta = int(input("Goal θ (multiple of 30, e.g., -60, -30, 0, 30, 60): "))
-            if 0 <= goal_x <= WIDTH and 0 <= goal_y <= HEIGHT and goal_theta % 30 == 0:
-                break
-            else:
-                print("Invalid input. Please enter valid goal coordinates.")
-        except:
-            print("Invalid input. Please enter integers.")
-
     # Get clearance
     while True:
         try:
-            clearance = int(input("Clearance (in units, >= 0): "))
+            clearance = int(input("Clearance (in units, >= 0) (tip: try 5): "))
             if clearance >= 0:
                 break
             else:
@@ -691,10 +666,18 @@ def get_user_input() -> tuple:
         except:
             print("Invalid input. Please enter an integer.")
 
-    # Get robot radius
+    return clearance
+
+def get_user_input_robot_radius() -> int:
+    """
+    Get the robot radius from the user
+
+    Returns:
+        int
+    """
     while True:
         try:
-            radius = int(input("Robot radius (in units, >= 0): "))
+            radius = int(input("Robot radius (in units, >= 0) (tip: try 5): "))
             if radius >= 0:
                 break
             else:
@@ -702,54 +685,138 @@ def get_user_input() -> tuple:
         except:
             print("Invalid input. Please enter an integer.")
 
+    return radius
+
+def get_user_input_step_size():
+    """
+    Get the step size from the user 
+
+    Returns:
+        int
+    """
     # Get step size
     while True:
         try:
-            step_size = int(input("Step size (1 <= step size <= 10): "))
+            step_size = int(input("Step size (1 <= step size <= 10) (tip: try 5): "))
             if 1 <= step_size <= 10:
                 break
             else:
                 print("Invalid input. Step size must be between 1 and 10.")
         except:
             print("Invalid input. Please enter an integer.")
+    
+    return step_size
 
-    start_coord = (start_x, start_y, start_theta)
-    goal_coord = (goal_x, goal_y, goal_theta)
-
-    return start_coord, goal_coord, clearance, radius, step_size
-
-def get_parameters() -> tuple:
+def get_user_input_start_pose(grayscale_map):
     """
-    Get parameters for the program, either using default values or prompting the user.
+    Get a valid start pose from the user
+
+    Params:
+        grascape_map (np.ndarray): Requires a grayscale map of the workspace 
 
     Returns:
-        tuple: (start_coord, goal_coord, clearance, radius, step_size)
+        Tuple[int, int, int]
+
     """
-    use_defaults = input("Do you want to use default values? (yes/no): ").strip().lower()
+    map_shape = (grayscale_map.shape[0], grayscale_map.shape[1])
 
-    if use_defaults == "yes":
-        print("Using default values...")
-        start_coord = (10,10, 0)
-        goal_coord = (400,200, 0)
-        clearance = 5
-        radius = 5
-        step_size = 10
-    else:
-        print("Prompting user for input...")
-        start_coord, goal_coord, clearance, radius, step_size = get_user_input()
+    # Get start point coordinates
+    while True:
+        try:
+            start_x = int(input("Start X (0 <= X <= 600) (tip: try 10): "))
+            start_y = int(input("Start Y (0 <= Y <= 250) (tip: try 10): "))
+            start_theta = int(input("Start θ (multiple of 30, e.g., -60, -30, 0, 30, 60) (tip: try 0): "))
+            if Valid_move(start_x, start_y, map_shape, grayscale_map):
+                break
+            else:
+                print("Invalid input. Please enter valid start coordinates.")
+        except:
+            print("Invalid input. Please enter integers.")
 
-    return start_coord, goal_coord, clearance, radius, step_size
+    return (start_x, start_y, start_theta)
+
+def get_user_input_goal_pose(grayscale_map) -> int:
+    """
+    Get a valid goal pose from the user
+
+    Params:
+        grayscale_map (np.ndarray): Requires a grayscale map of the workspace 
+
+    Returns:
+        Tuple[int, int, int]
+
+    """
+    map_shape = (grayscale_map.shape[0], grayscale_map.shape[1])
+
+    # Get goal point coordinates
+    while True:
+        try:
+            goal_x = int(input("goal X (0 <= X <= 600) (tip: try 400): "))
+            goal_y = int(input("goal Y (0 <= Y <= 250) (tip: try 200): "))
+            goal_theta = int(input("goal θ (multiple of 30, e.g., -60, -30, 0, 30, 60) (tip: try 0): "))
+            if Valid_move(goal_x, goal_y, map_shape, grayscale_map):
+                break
+            else:
+                print("Invalid input. Please enter valid goal coordinates.")
+        except:
+            print("Invalid input. Please enter integers.")
+
+    return (goal_x, goal_y, goal_theta)
+
+def Collision_between_points(current_x, current_y, neighbor_x, neighbor_y, grayscale_map, step_size):
+    """
+    Returns true if there is a collision between current and neighbor, false if not. Requires the grayscale map and the step size for the search.
+    """
+    for baby_step in range(1, step_size):
+        dx = neighbor_x - current_x
+        dy = neighbor_y - current_y 
+        distance = (dx**2 + dy**2)**0.5
+        unit_x = dx / distance
+        unit_y = dy / distance
+        test_x = current_x + unit_x * baby_step
+        test_y = current_y + unit_y * baby_step 
+        if not Valid_move(
+            test_x, test_y, 
+            (grayscale_map.shape[0], grayscale_map.shape[1]),
+            grayscale_map):
+            return True 
+        return False              
 
 def main() -> None:
     """
     main function
     """
-    #Visualize both the dilated and the obstacle map
-    print("Generating map...")
-    dilated_map = test()
-    start_coord, goal_coord, clearance, radius, step_size = get_parameters()
-    #Run the ASTAR algorithm
-    path = Astar(dilated_map, start_coord, goal_coord, radius, step_size)
+
+    # 1. Prompt user for a clearance
+    clearance = get_user_input_clearance()
+    
+    # 2. Prompt user for a robot radius
+    robot_radius = get_user_input_robot_radius()
+
+    # 3. Prompt user for a step size
+    step_size = get_user_input_step_size()
+
+    # 4. Construct a grayscale map of the workspace
+    # 4.1 Construct a BGR map
+    sf_obstacle = 7
+    bgr_map = generate_map(sf_obstacle) 
+    # 4.2 Dilate the map with a safety margin
+    safety_margin = max(robot_radius, clearance)
+    safety_margin_map = dilate_obstacle(
+        bgr_map, safety_margin
+    )
+    # 4.3 Convert the safety margin map to a grayscale map
+    grayscale_map = cv2.cvtColor(safety_margin_map, cv2.COLOR_BGR2GRAY)
+
+    # 6. Prompt user for a VALID start pose
+    start_pose = get_user_input_start_pose(grayscale_map)
+
+    # 7. Prompt user for a VALID goal pose
+    goal_pose = get_user_input_goal_pose(grayscale_map)
+
+    # 8. Run the A* algorithm
+    path = Astar(safety_margin_map, start_pose, goal_pose, safety_margin, step_size)
+    
 
 if __name__ == "__main__":
     main()
