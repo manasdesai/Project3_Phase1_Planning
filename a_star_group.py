@@ -11,7 +11,6 @@ from queue import Queue
 import matplotlib.pyplot as plt
 from typing import List, Dict
 
-
 #############
 ## CONSTANTS
 # Scale Factor
@@ -168,7 +167,7 @@ def MoveSlowRight(
     )
     newNode.y = (
         round(
-            current_node.x
+            current_node.y
             + step_size * np.sin(np.deg2rad(current_node._theta + SLOW_RIGHT) * SF) * 2
         )
         / 2
@@ -214,6 +213,11 @@ def generate_map(SF=2):
     # EMPTY map
     map = np.ones((HEIGHT, WIDTH, 3), dtype=np.uint8) * 255
 
+    #######################################################################
+    ## The four walls
+    def Wall_obstacle(x, y):
+        return x == 0 or x == WIDTH - 1 or y == 0 or y == HEIGHT - 1
+        
     ########
     ## E obstacle
     def E1_obstacle(x, y):
@@ -374,6 +378,7 @@ def generate_map(SF=2):
                 or Six1_obstacle(x, y)
                 or Six2_obstacle(x, y)
                 or One_obstacle(x, y)
+                or Wall_obstacle(x, y)
             ):
                 map[y, x] = (0, 0, 0)
 
@@ -621,5 +626,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # main()
-    test()
+    main()
+    
