@@ -17,7 +17,7 @@ from typing import List, Dict, Tuple
 ###############################################################################
 ################## CONSTANTS ##########################
 ###############################################################################
-LOGGING = True
+LOGGING = False
 
 
 ###############################################################################
@@ -635,6 +635,7 @@ def astar(
         # Return the path and cost
         return path, cost
 
+    path("No path found")
     return None, None
 
 
@@ -839,7 +840,7 @@ if __name__ == "__main__":
     )
     goal = (x_goal, y_goal, theta_goal)
 
-    START_TIME = time.perf_counter()
+
 
     # Convert the start and goal poses to the grid frame
     start = coordinate_transformation(start, SPATIAL_RESOLUTION, ANGULAR_RESOLUTION)
@@ -871,6 +872,7 @@ if __name__ == "__main__":
     print("Executing A* search from start to goal.")
     # ONLY TURN LOGGING TO `True` IF YOU WANT TO GENERATE ANIMATION FILES AND HAVE MATPLOTLIB ALSO SHOW THE ANIMATION.
     # RECOMMENDED: KEEP FALSE. THIS PROCESS IS TIME CONSUMING.
+    START_TIME = time.perf_counter()
     path, cost = astar(
         occupancy_grid,
         color_occupancy_grid,
@@ -883,7 +885,11 @@ if __name__ == "__main__":
         ANGULAR_RESOLUTION,
         logging=LOGGING,
     )
+    END_TIME = time.perf_counter()
+    RUN_TIME = END_TIME - START_TIME
 
+    print(f"Total time for execution: {RUN_TIME} seconds.")
+    
     # Proceed with static visualization to aid the grader in assessing the results. This shows the color occupancy grid with the final path.
     if path:
         # Print the path in grid units
@@ -942,7 +948,4 @@ if __name__ == "__main__":
         )
         plt.show()
 
-    END_TIME = time.perf_counter()
-    RUN_TIME = END_TIME - START_TIME
 
-    print(f"Total time for execution: {RUN_TIME} seconds.")
