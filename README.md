@@ -11,6 +11,7 @@
 This is a Python implementation of a finding a path between initial coordinate and start coordinate through the obstacle canvas using the A* algorithm. 
 
 ![Animation Result](/astar_animation.gif)
+
 **Figure 1.** This animation, produced with `a_star_manas_ronen_vaibhav.py`, shows how A* traverses the configuration space from start to goal. 
 
 ## Requirements
