@@ -2,7 +2,7 @@
 # A* Algorithm
 
 ## Team Members 
-1. Manas Desai () ()
+1. Manas Desai (120998973) (mdesai01)
 2. Ronen Aniti (112095116) (raniti)
 3. Vaibhav Yuwaraj Shende (121206817) (svaibhav)
 
