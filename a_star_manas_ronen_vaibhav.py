@@ -1,6 +1,13 @@
-#Github link: https://github.com/manasdesai/Project3_Phase1_Planning
+# Github link: https://github.com/manasdesai/Project3_Phase1_Planning
 #!/usr/bin/env python3
 
+"""
+## Team Members
+1. Manas Desai (120998973) (mdesai01)
+2. Ronen Aniti (112095116) (raniti)
+3. Vaibhav Yuwaraj Shende (121206817) (svaibhav)
+
+"""
 
 # Import Libraries
 import time
@@ -13,7 +20,7 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.colors import ListedColormap, BoundaryNorm
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
-from typing import List, Dict, Tuple
+from typing import Tuple
 
 ###############################################################################
 ################## CONSTANTS ##########################
@@ -841,8 +848,6 @@ if __name__ == "__main__":
     )
     goal = (x_goal, y_goal, theta_goal)
 
-
-
     # Convert the start and goal poses to the grid frame
     start = coordinate_transformation(start, SPATIAL_RESOLUTION, ANGULAR_RESOLUTION)
 
@@ -890,7 +895,7 @@ if __name__ == "__main__":
     RUN_TIME = END_TIME - START_TIME
 
     print(f"Total time for execution: {RUN_TIME} seconds.")
-    
+
     # Proceed with static visualization to aid the grader in assessing the results. This shows the color occupancy grid with the final path.
     if path:
         # Print the path in grid units
@@ -948,5 +953,3 @@ if __name__ == "__main__":
             scale=0.5,
         )
         plt.show()
-
-
